@@ -1,5 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+
+#if defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
+    #define _x64_
+#endif
 
 typedef struct bits
 {
@@ -19,57 +24,102 @@ typedef enum CPUID_INDEX
     FEATURES = 1,
 } CPUID_INDEX;
 
-void cpuid(CPUID_INDEX index, unsigned int regs[4])
+typedef enum REGISTER
+{
+    EAX,
+    EBX,
+    ECX,
+    EDX,
+} REGISTER;
+
+typedef enum MSR_OFFSET
+{
+    VMX_BASIC = 0x480,
+} MSR_OFFSET;
+
+void show_architecture()
+{
+#if defined(_x64_)
+    printf("64-bit CPU detected.\n");
+#else
+    printf("32-bit CPU detected.\n");
+#endif
+}
+
+void cpuid(CPUID_INDEX index, unsigned int registers[4])
 {
     __asm__ __volatile__(
-#if defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
+#if defined(_x64_)
             "pushq %%rbx          \n\t" /* save %rbx */
 #else
             "pushl %%ebx          \n\t" /* save %ebx */
 #endif
             "cpuid                \n\t"
             "movl %%ebx, %[ebx]   \n\t" /* write result into output var */
-#if defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
+#if defined(_x64_)
             "popq %%rbx           \n\t"
 #else
             "popl %%ebx           \n\t"
 #endif
-            : "=a"(regs[0]), [ebx] "=r"(regs[1]), "=c"(regs[2]), "=d"(regs[3])
+            : "=a"(registers[EAX]), [ebx] "=r"(registers[EBX]),
+              "=c"(registers[ECX]), "=d"(registers[EDX])
             : "a"(index));
 }
 
 int cpuid_highest_function(char vendor_id[13])
 {
-    unsigned int regs[4];
+    unsigned int registers[4];
 
-    cpuid(HIGHEST_FUNCTION, regs);
+    cpuid(HIGHEST_FUNCTION, registers);
 
     for (int i = 4; i < 8; i++)
     {
-        vendor_id[i - 4] = ((char*)regs)[i];
+        vendor_id[i - 4] = ((char*)registers)[i];
     }
 
     for (int i = 12; i < 16; i++)
     {
-        vendor_id[i - 8] = ((char*)regs)[i];
+        vendor_id[i - 8] = ((char*)registers)[i];
     }
 
     for (int i = 8; i < 12; i++)
     {
-        vendor_id[i] = ((char*)regs)[i];
+        vendor_id[i] = ((char*)registers)[i];
     }
 
     vendor_id[12] = 0;
 
-    return regs[0];
+    return registers[EAX];
+}
+
+void rdmsr(int index, unsigned int registers[4])
+{
+    __asm__ __volatile__(
+#if defined(_x64_)
+            "pushq %%rax          \n\t"
+#else
+            "pushl %%eax          \n\t"
+#endif
+            "rdmsr                \n\t"
+//            "movl %%ebx, %[ebx]   \n\t"
+#if defined(_x64_)
+            "popq %%rax           \n\t"
+#else
+            "popl %%eax           \n\t"
+#endif
+//            : "=a"(registers[EAX]), [ebx] "=r"(registers[EBX]),
+//              "=c"(registers[ECX]), "=d"(registers[EDX])
+            :: "c"(index));
 }
 
 int main()
 {
+    show_architecture();
+
     char vendor_id[13];
     int highest_function = cpuid_highest_function(vendor_id);
 
-    printf("CPU vendor id: %s\n", vendor_id);
+    printf("\nCPU vendor ID: %s\n", vendor_id);
     printf("Highest CPUID function available: %d\n", highest_function);
 
     if (highest_function < FEATURES)
@@ -78,11 +128,22 @@ int main()
         exit(EXIT_FAILURE);
     }
 
-    unsigned int regs[4];
-    cpuid(FEATURES, regs);
+    unsigned int registers[4];
+    cpuid(FEATURES, registers);
 
-    printf("Features\n");
-    printf("  Virtual Machine eXtensions (VMX): %d\n", ((bits*)regs)[2].b5);
+    bool feature_vmx = ((bits*)registers)[2].b5;
+
+    printf("\nFeatures:\n");
+    printf("  Virtual Machine eXtensions (VMX): %d\n", feature_vmx);
+
+    if (!feature_vmx)
+    {
+        printf("CPU does not support VMX.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    //rdmsr(VMX_BASIC, registers);
+    //printf("VMCS revision identifier: %d\n", registers[EDX]);
 
     return 0;
 }
