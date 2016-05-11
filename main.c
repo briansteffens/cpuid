@@ -19,7 +19,7 @@ typedef enum CPUID_INDEX
     FEATURES = 1,
 } CPUID_INDEX;
 
-void cpuid(CPUID_INDEX index, int regs[4])
+void cpuid(CPUID_INDEX index, unsigned int regs[4])
 {
     __asm__ __volatile__(
 #if defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
@@ -59,7 +59,7 @@ int cpuid_highest_function(char vendor_id[13])
         vendor_id[i] = ((char*)regs)[i];
     }
 
-    vendor_id[13] = 0;
+    vendor_id[12] = 0;
 
     return regs[0];
 }
@@ -83,15 +83,6 @@ int main()
 
     printf("Features\n");
     printf("  Virtual Machine eXtensions (VMX): %d\n", ((bits*)regs)[2].b5);
-
-    /*
-    for (i = 0; i < 16 * 8; i++)
-    {
-        printf("%d: %d\n", i, ((bit*)regs)[i].x);
-    }
-    */
-
-    printf("\n");
 
     return 0;
 }
