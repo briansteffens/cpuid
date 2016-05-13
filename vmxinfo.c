@@ -196,7 +196,7 @@ int check_vmx_settings(void)
     return 0;
 }
 
-static int __init supermod_init(void)
+static int __init vmxinfo_init(void)
 {
     printk(KERN_INFO "---vmxinfo starting-----------------------------\n");
 
@@ -218,10 +218,10 @@ static int __init supermod_init(void)
     }
 }
 
-static void __exit supermod_exit(void)
+static void __exit vmxinfo_exit(void)
 {
     printk(KERN_INFO "---vmxinfo done---------------------------------\n");
 }
 
-module_init(supermod_init);
-module_exit(supermod_exit);
+module_init(vmxinfo_init);
+module_exit(vmxinfo_exit);
