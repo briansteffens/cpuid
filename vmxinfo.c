@@ -158,11 +158,8 @@ int check_vmx_settings(void)
     rdmsr_call(MSR_VMX_BASIC, registers);
     printk(KERN_INFO "VMCS revision identifier: %d\n", registers[EAX]);
 
-    if (get_bit(&registers[EDX], 12) == 0)
-    {
-        printk(KERN_INFO "Unhandled VMCS size specification");
-        return -1;
-    }
+    printk(KERN_INFO "VMCS region size: %d\n",
+            extract_bits(&registers[EDX], 0, 0, 12));
 
     printk(KERN_INFO "VMXON max width (Intel 64 support): %d\n",
             !get_bit(&registers[EDX], 16));
@@ -216,11 +213,15 @@ static int __init vmxinfo_init(void)
     {
         return -1;
     }
+
+    printk(KERN_INFO "---vmxinfo done---------------------------------\n");
+
+    return -1;
 }
 
 static void __exit vmxinfo_exit(void)
 {
-    printk(KERN_INFO "---vmxinfo done---------------------------------\n");
+    printk(KERN_INFO "Unexpected vmxinfo exit call\n");
 }
 
 module_init(vmxinfo_init);
