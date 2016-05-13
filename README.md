@@ -1,7 +1,7 @@
 vmxinfo
 =======
 
-Get information about VMX (Virtual Machine eXtensions) on a Linux CPU.
+Get information about VMX (Virtual Machine eXtensions) on a CPU.
 
 This is a kernel module that, when inserted, gets information from the running
 CPU about the ability (or lack thereof) for hardware-assisted virtualization
